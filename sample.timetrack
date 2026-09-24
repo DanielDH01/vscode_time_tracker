@@ -1,0 +1,79 @@
+{
+  "$schema": "./src/schemas/timetrack.schema.json",
+  "version": "1.0",
+  "project": "Client Portal Development",
+  "client": "Acme Innovations Ltd",
+  "currency": "EUR",
+  "hourlyRate": 85,
+  "notes": "Payment terms: Net 30 days. Work includes frontend UI, backend API integration, and performance audits.",
+  "entries": [
+    {
+      "id": "tt_init_01",
+      "date": "2026-09-22",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "durationHours": 3.0,
+      "category": "Development",
+      "description": "Implemented OAuth2 user authentication and session management",
+      "billable": true,
+      "invoiced": true,
+      "invoiceNumber": "INV-2026-081"
+    },
+    {
+      "id": "tt_init_02",
+      "date": "2026-09-22",
+      "startTime": "13:30",
+      "endTime": "15:00",
+      "durationHours": 1.5,
+      "category": "Meeting",
+      "description": "Sprint planning and technical architecture review with client team",
+      "billable": true,
+      "invoiced": true,
+      "invoiceNumber": "INV-2026-081"
+    },
+    {
+      "id": "tt_init_03",
+      "date": "2026-09-23",
+      "startTime": "10:00",
+      "endTime": "13:30",
+      "durationHours": 3.5,
+      "category": "Development",
+      "description": "Built responsive dashboard cards and interactive time log table",
+      "billable": true,
+      "invoiced": false
+    },
+    {
+      "id": "tt_init_04",
+      "date": "2026-09-23",
+      "startTime": "14:30",
+      "endTime": "16:00",
+      "durationHours": 1.5,
+      "category": "Bugfix",
+      "description": "Fixed timezone offset calculation when rendering entries across date boundaries",
+      "billable": true,
+      "invoiced": false
+    },
+    {
+      "id": "tt_init_05",
+      "date": "2026-09-24",
+      "startTime": "11:00",
+      "endTime": "12:00",
+      "durationHours": 1.0,
+      "category": "Internal",
+      "description": "Internal developer tooling setup and dependency audit",
+      "billable": false,
+      "invoiced": false
+    },
+    {
+      "id": "tt_init_06",
+      "date": "2026-09-24",
+      "startTime": "14:00",
+      "endTime": "16:30",
+      "durationHours": 2.5,
+      "category": "Development",
+      "description": "Integrated export module for HTML, Markdown, and CSV client invoices",
+      "billable": true,
+      "invoiced": false
+    }
+  ]
+}

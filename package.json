@@ -1,0 +1,117 @@
+{
+  "name": "vscode-time-tracker",
+  "displayName": "Time Tracker & Invoicing",
+  "description": "Track project hours, manage billable time, and generate customer invoices using dedicated .timetrack files.",
+  "version": "1.0.0",
+  "publisher": "YOUR_PUBLISHER_ID",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/vscode-time-tracker"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Productivity"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "timetrack.editor",
+        "displayName": "Time Tracker Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.timetrack"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "languages": [
+      {
+        "id": "timetrack",
+        "aliases": [
+          "Time Tracker",
+          "timetrack"
+        ],
+        "extensions": [
+          ".timetrack"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "*.timetrack",
+        "url": "./src/schemas/timetrack.schema.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "timetracker.createTimesheet",
+        "title": "Time Tracker: Create New Timesheet",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "timetracker.startTimer",
+        "title": "Time Tracker: Start Tracking Time",
+        "category": "Time Tracker",
+        "icon": "$(play)"
+      },
+      {
+        "command": "timetracker.stopTimer",
+        "title": "Time Tracker: Stop Tracking Time & Save",
+        "category": "Time Tracker",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "timetracker.addEntry",
+        "title": "Time Tracker: Add Manual Time Entry",
+        "category": "Time Tracker"
+      },
+      {
+        "command": "timetracker.exportInvoice",
+        "title": "Time Tracker: Export Timesheet / Invoice",
+        "category": "Time Tracker"
+      }
+    ],
+    "configuration": {
+      "title": "Time Tracker",
+      "properties": {
+        "timetracker.defaultHourlyRate": {
+          "type": "number",
+          "default": 75,
+          "description": "Default hourly rate when creating a new timesheet."
+        },
+        "timetracker.defaultCurrency": {
+          "type": "string",
+          "default": "USD",
+          "description": "Default currency code (e.g. USD, EUR, GBP) for timesheets."
+        },
+        "timetracker.defaultTimesheetFile": {
+          "type": "string",
+          "default": "timesheet.timetrack",
+          "description": "Default timesheet filename used for timer logs when no file is active."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "compile": "tsc -p ./ --noEmit",
+    "watch": "node esbuild.js --watch",
+    "build": "node esbuild.js --production",
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "publish": "npx @vscode/vsce publish --no-dependencies",
+    "test": "node --test dist/test/timesheet.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TimeTrackerTimesheet",
+  "description": "Schema for .timetrack project timesheet files",
+  "type": "object",
+  "required": ["version", "project", "entries"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URL or relative path to the timesheet schema"
+    },
+    "version": {
+      "type": "string",
+      "description": "Timesheet format version",
+      "default": "1.0"
+    },
+    "project": {
+      "type": "string",
+      "description": "Name of the project being tracked"
+    },
+    "client": {
+      "type": "string",
+      "description": "Customer or client name for whom the work is performed"
+    },
+    "currency": {
+      "type": "string",
+      "description": "Currency code (e.g. EUR, USD, GBP, CAD)",
+      "default": "USD"
+    },
+    "hourlyRate": {
+      "type": "number",
+      "description": "Hourly billing rate for this project",
+      "minimum": 0,
+      "default": 75
+    },
+    "notes": {
+      "type": "string",
+      "description": "General billing or project notes for the customer"
+    },
+    "entries": {
+      "type": "array",
+      "description": "List of logged time entries",
+      "items": {
+        "type": "object",
+        "required": ["id", "date", "durationHours", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this time entry"
+          },
+          "date": {
+            "type": "string",
+            "description": "Date of the work in YYYY-MM-DD format",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Optional start time in 24h format (HH:MM)"
+          },
+          "endTime": {
+            "type": "string",
+            "description": "Optional end time in 24h format (HH:MM)"
+          },
+          "durationHours": {
+            "type": "number",
+            "description": "Duration spent in decimal hours (e.g., 1.5 = 1 hr 30 mins)",
+            "minimum": 0.01
+          },
+          "category": {
+            "type": "string",
+            "description": "Task category or tag (e.g. Development, Code Review, Meeting, Bugfix)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of what work was completed"
+          },
+          "billable": {
+            "type": "boolean",
+            "description": "Whether this entry should be billed to the customer",
+            "default": true
+          },
+          "invoiced": {
+            "type": "boolean",
+            "description": "Whether this entry has already been included on a sent invoice",
+            "default": false
+          },
+          "invoiceNumber": {
+            "type": "string",
+            "description": "Optional invoice ID or reference number if invoiced"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
