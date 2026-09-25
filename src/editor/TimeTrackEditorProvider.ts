@@ -267,7 +267,7 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
           </div>
           <div class="form-group">
             <label for="entry-duration">Duration (Hours) *</label>
-            <input type="number" id="entry-duration" step="0.05" min="0.01" required>
+            <input type="number" id="entry-duration" step="any" min="0.01" required>
           </div>
         </div>
 
@@ -323,7 +323,7 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
         <div class="form-row">
           <div class="form-group">
             <label for="settings-rate">Hourly Rate *</label>
-            <input type="number" id="settings-rate" step="0.5" min="0" required>
+            <input type="number" id="settings-rate" step="any" min="0" required>
           </div>
           <div class="form-group">
             <label for="settings-currency">Currency Code</label>
