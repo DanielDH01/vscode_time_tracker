@@ -2,7 +2,7 @@
   "name": "devtrack-freelance",
   "displayName": "DevTrack: Simple Freelance Time Tracker",
   "description": "Simple time tracker for freelance software engineers. Log project hours in a .timetrack file, manage billable time, and generate client invoices.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "DanielDH01",
   "icon": "icon/icon.png",
   "license": "MIT",

@@ -521,9 +521,20 @@ function saveEntryFromModal() {
   const invoicedInput = document.getElementById('entry-invoiced') as HTMLInputElement;
   const invNumberInput = document.getElementById('entry-invnumber') as HTMLInputElement;
 
+  if (!dateInput.value) {
+    alert('Please enter a date');
+    dateInput.focus();
+    return;
+  }
   const durationVal = parseFloat(durationInput.value) || 0;
   if (durationVal <= 0) {
     alert('Duration must be greater than 0');
+    durationInput.focus();
+    return;
+  }
+  if (!descInput.value.trim()) {
+    alert('Please enter a description of work');
+    descInput.focus();
     return;
   }
 

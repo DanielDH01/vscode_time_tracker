@@ -244,7 +244,7 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
         <h2 id="modal-entry-title">Add Time Entry</h2>
         <button class="close-btn modal-close">&times;</button>
       </div>
-      <form id="entry-form">
+      <form id="entry-form" novalidate>
         <div class="form-row">
           <div class="form-group">
             <label for="entry-date">Date</label>
@@ -267,7 +267,7 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
           </div>
           <div class="form-group">
             <label for="entry-duration">Duration (Hours) *</label>
-            <input type="number" id="entry-duration" step="any" min="0.01" required>
+            <input type="number" id="entry-duration" step="any" min="0" required>
           </div>
         </div>
 
@@ -311,7 +311,7 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
         <h2>Project & Invoicing Settings</h2>
         <button class="close-btn modal-close">&times;</button>
       </div>
-      <form id="settings-form">
+      <form id="settings-form" novalidate>
         <div class="form-group">
           <label for="settings-project">Project Name *</label>
           <input type="text" id="settings-project" required>
