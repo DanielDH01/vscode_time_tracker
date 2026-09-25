@@ -7,6 +7,7 @@ import {
   computeSummary,
   createEmptyTimesheet,
   parseTimesheet,
+  formatIncompleteTime,
   TimeEntry,
   TimesheetData
 } from '../models/timesheet';
@@ -35,6 +36,18 @@ describe('Timesheet Models & Helpers', () => {
     assert.strictEqual(formatDuration(2.0), '2h');
     assert.strictEqual(formatDuration(0.75), '45m');
     assert.strictEqual(formatDuration(0), '0m');
+  });
+
+  it('should auto-complete incomplete hours to HH:00 when minutes are missing', () => {
+    assert.strictEqual(formatIncompleteTime('10', ''), '10:00');
+    assert.strictEqual(formatIncompleteTime('9', ''), '09:00');
+    assert.strictEqual(formatIncompleteTime('09', ''), '09:00');
+    assert.strictEqual(formatIncompleteTime('14', ''), '14:00');
+    assert.strictEqual(formatIncompleteTime('0', ''), '00:00');
+    assert.strictEqual(formatIncompleteTime('10', '3'), '10:30');
+    assert.strictEqual(formatIncompleteTime('10', '15'), '10:15');
+    assert.strictEqual(formatIncompleteTime('', ''), null);
+    assert.strictEqual(formatIncompleteTime('25', ''), null);
   });
 
   it('should compute financial summary accurately', () => {

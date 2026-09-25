@@ -105,8 +105,8 @@ function setupEventListeners() {
   const durationInput = document.getElementById('entry-duration') as HTMLInputElement;
 
   const updateCalculatedDuration = () => {
-    const s = startTimeInput.value;
-    const e = endTimeInput.value;
+    const s = startTimeInput?.value;
+    const e = endTimeInput?.value;
     if (s && e) {
       const [sh, sm] = s.split(':').map(Number);
       let [eh, em] = e.split(':').map(Number);
@@ -124,6 +124,139 @@ function setupEventListeners() {
 
   startTimeInput?.addEventListener('change', updateCalculatedDuration);
   endTimeInput?.addEventListener('change', updateCalculatedDuration);
+  startTimeInput?.addEventListener('input', updateCalculatedDuration);
+  endTimeInput?.addEventListener('input', updateCalculatedDuration);
+
+  // Auto-complete time (e.g. 10:-- -> 10:00) when pressing Tab or blurring
+  function attachTimeInputAutoFormat(
+    input: HTMLInputElement,
+    nextInputId?: string,
+    prevInputId?: string
+  ) {
+    let hourBuffer = '';
+    let minuteBuffer = '';
+    let activeSection: 'hour' | 'minute' = 'hour';
+
+    const syncFromValue = () => {
+      if (input.value && input.value.includes(':')) {
+        const parts = input.value.split(':');
+        hourBuffer = parts[0];
+        minuteBuffer = parts[1];
+      } else {
+        hourBuffer = '';
+        minuteBuffer = '';
+      }
+      activeSection = 'hour';
+    };
+
+    input.addEventListener('focus', syncFromValue);
+
+    const applyAutoCompletion = (shouldNavigateNext = false, shouldNavigatePrev = false) => {
+      if (input.value && input.value.includes(':') && input.value.length === 5) {
+        if (shouldNavigateNext && nextInputId) {
+          document.getElementById(nextInputId)?.focus();
+        } else if (shouldNavigatePrev && prevInputId) {
+          document.getElementById(prevInputId)?.focus();
+        }
+        return;
+      }
+
+      if (hourBuffer !== '') {
+        const h = parseInt(hourBuffer, 10);
+        if (!isNaN(h) && h >= 0 && h <= 23) {
+          const formattedHour = String(h).padStart(2, '0');
+          let formattedMinute = '00';
+          if (minuteBuffer.length === 1) {
+            formattedMinute = minuteBuffer + '0';
+          } else if (minuteBuffer.length >= 2) {
+            const m = parseInt(minuteBuffer.slice(0, 2), 10);
+            if (!isNaN(m) && m >= 0 && m <= 59) {
+              formattedMinute = String(m).padStart(2, '0');
+            }
+          }
+
+          const formatted = `${formattedHour}:${formattedMinute}`;
+          input.value = formatted;
+          hourBuffer = formattedHour;
+          minuteBuffer = formattedMinute;
+
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+
+      if (shouldNavigateNext && nextInputId) {
+        document.getElementById(nextInputId)?.focus();
+      } else if (shouldNavigatePrev && prevInputId) {
+        document.getElementById(prevInputId)?.focus();
+      }
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key >= '0' && e.key <= '9') {
+        if (activeSection === 'hour') {
+          if (hourBuffer.length >= 2) {
+            hourBuffer = e.key;
+          } else {
+            hourBuffer += e.key;
+          }
+
+          if (hourBuffer.length === 2 || parseInt(hourBuffer, 10) > 2) {
+            activeSection = 'minute';
+            minuteBuffer = '';
+          }
+        } else {
+          if (minuteBuffer.length >= 2) {
+            minuteBuffer = e.key;
+          } else {
+            minuteBuffer += e.key;
+          }
+        }
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (activeSection === 'minute') {
+          if (minuteBuffer.length > 0) {
+            minuteBuffer = minuteBuffer.slice(0, -1);
+          } else {
+            activeSection = 'hour';
+            minuteBuffer = '';
+          }
+        } else {
+          hourBuffer = hourBuffer.slice(0, -1);
+        }
+      } else if (e.key === ':' || e.key === 'ArrowRight') {
+        activeSection = 'minute';
+      } else if (e.key === 'ArrowLeft') {
+        activeSection = 'hour';
+      } else if (e.key === 'Tab') {
+        if (!e.shiftKey) {
+          if (hourBuffer !== '' && (minuteBuffer === '' || input.value === '')) {
+            e.preventDefault();
+            applyAutoCompletion(true, false);
+          }
+        } else {
+          if (hourBuffer !== '' && input.value === '') {
+            e.preventDefault();
+            applyAutoCompletion(false, true);
+          }
+        }
+      } else if (e.key === 'Enter') {
+        if (hourBuffer !== '' && (minuteBuffer === '' || input.value === '')) {
+          applyAutoCompletion(false, false);
+        }
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      applyAutoCompletion(false, false);
+    });
+  }
+
+  if (startTimeInput) {
+    attachTimeInputAutoFormat(startTimeInput, 'entry-end', 'entry-category');
+  }
+  if (endTimeInput) {
+    attachTimeInputAutoFormat(endTimeInput, 'entry-duration', 'entry-start');
+  }
 
   // Entry Form Submit
   document.getElementById('entry-form')?.addEventListener('submit', (e) => {

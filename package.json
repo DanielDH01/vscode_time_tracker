@@ -1,20 +1,29 @@
 {
-  "name": "vscode-time-tracker",
-  "displayName": "Time Tracker & Invoicing",
-  "description": "Track project hours, manage billable time, and generate customer invoices using dedicated .timetrack files.",
+  "name": "devtrack-freelance",
+  "displayName": "DevTrack: Simple Freelance Time Tracker",
+  "description": "Simple time tracker for freelance software engineers. Log project hours in a .timetrack file, manage billable time, and generate client invoices.",
   "version": "1.0.0",
-  "publisher": "YOUR_PUBLISHER_ID",
+  "publisher": "DanielDH01",
+  "icon": "icon/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/vscode-time-tracker"
+    "url": "https://github.com/DanielDH01/devtrack-freelance"
   },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other",
-    "Productivity"
+    "Other"
+  ],
+  "keywords": [
+    "time-tracker",
+    "freelance",
+    "invoice",
+    "hours",
+    "timesheet",
+    "productivity",
+    "billing"
   ],
   "main": "./dist/extension.js",
   "contributes": {

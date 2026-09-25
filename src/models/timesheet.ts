@@ -242,3 +242,25 @@ export function parseTimesheet(text: string): { valid: boolean; data: TimesheetD
     };
   }
 }
+
+export function formatIncompleteTime(hourBuffer: string, minuteBuffer = ''): string | null {
+  if (!hourBuffer) {
+    return null;
+  }
+  const h = parseInt(hourBuffer, 10);
+  if (isNaN(h) || h < 0 || h > 23) {
+    return null;
+  }
+  const formattedHour = String(h).padStart(2, '0');
+  let formattedMinute = '00';
+  if (minuteBuffer.length === 1) {
+    formattedMinute = minuteBuffer + '0';
+  } else if (minuteBuffer.length >= 2) {
+    const m = parseInt(minuteBuffer.slice(0, 2), 10);
+    if (!isNaN(m) && m >= 0 && m <= 59) {
+      formattedMinute = String(m).padStart(2, '0');
+    }
+  }
+  return `${formattedHour}:${formattedMinute}`;
+}
+
