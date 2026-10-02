@@ -8,6 +8,7 @@ import {
   createEmptyTimesheet,
   parseTimesheet,
   formatIncompleteTime,
+  applyRounding,
   TimeEntry,
   TimesheetData
 } from '../models/timesheet';
@@ -141,5 +142,67 @@ describe('Timesheet Models & Helpers', () => {
     assert.ok(html.includes('Client Project'));
     assert.ok(html.includes('Acme Corp'));
     assert.ok(html.includes('100.00 EUR'));
+  });
+
+  it('should apply smart billing rounding rules correctly', () => {
+    // 15m up (ceil)
+    assert.strictEqual(applyRounding(1.18, { enabled: true, interval: '15m', direction: 'up' }), 1.25);
+    assert.strictEqual(applyRounding(1.02, { enabled: true, interval: '15m', direction: 'up' }), 1.25);
+    assert.strictEqual(applyRounding(0.05, { enabled: true, interval: '15m', direction: 'up' }), 0.25);
+
+    // 15m nearest
+    assert.strictEqual(applyRounding(1.02, { enabled: true, interval: '15m', direction: 'nearest' }), 1.0);
+    assert.strictEqual(applyRounding(1.20, { enabled: true, interval: '15m', direction: 'nearest' }), 1.25);
+
+    // 6m up (0.1h)
+    assert.strictEqual(applyRounding(0.33, { enabled: true, interval: '6m', direction: 'up' }), 0.4);
+
+    // 30m up (0.5h)
+    assert.strictEqual(applyRounding(1.1, { enabled: true, interval: '30m', direction: 'up' }), 1.5);
+
+    // Disabled / None
+    assert.strictEqual(applyRounding(1.18, { enabled: false, interval: '15m', direction: 'up' }), 1.18);
+    assert.strictEqual(applyRounding(1.18, { enabled: true, interval: 'none', direction: 'up' }), 1.18);
+  });
+
+  it('should include profile info and VAT in summary and HTML invoice', () => {
+    const data: TimesheetData = {
+      version: '1.0',
+      project: 'Client Portal',
+      client: 'Acme BV',
+      currency: 'EUR',
+      hourlyRate: 100,
+      profile: {
+        businessName: 'Daniel Tech Studio',
+        fullName: 'Daniel D.',
+        email: 'info@danieltech.nl',
+        vatNumber: 'NL123456789B01',
+        vatRate: 21,
+        iban: 'NL99BANK0123456789'
+      },
+      entries: [
+        {
+          id: 'e1',
+          date: '2026-09-25',
+          durationHours: 10.0,
+          description: 'Full stack development',
+          billable: true,
+          invoiced: false
+        }
+      ]
+    };
+
+    const summary = computeSummary(data);
+    assert.strictEqual(summary.totalAmount, 1000.0);
+    assert.strictEqual(summary.vatRate, 21);
+    assert.strictEqual(summary.vatAmount, 210.0);
+    assert.strictEqual(summary.totalWithVat, 1210.0);
+
+    const html = exportToHTML(data);
+    assert.ok(html.includes('Daniel Tech Studio'));
+    assert.ok(html.includes('NL123456789B01'));
+    assert.ok(html.includes('NL99BANK0123456789'));
+    assert.ok(html.includes('210.00 EUR'));
+    assert.ok(html.includes('1210.00 EUR'));
   });
 });

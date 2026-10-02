@@ -18,6 +18,30 @@ interface TimeEntry {
   invoiceNumber?: string;
 }
 
+export type RoundingInterval = 'none' | '5m' | '6m' | '15m' | '30m' | '1h';
+export type RoundingDirection = 'up' | 'nearest';
+
+export interface RoundingConfig {
+  enabled: boolean;
+  interval: RoundingInterval;
+  direction: RoundingDirection;
+}
+
+export interface FreelancerProfile {
+  businessName?: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  kvkNumber?: string;
+  vatNumber?: string;
+  vatRate?: number;
+  iban?: string;
+  bic?: string;
+  logo?: string;
+  paymentTermsDays?: number;
+}
+
 interface TimesheetData {
   $schema?: string;
   version: string;
@@ -26,7 +50,39 @@ interface TimesheetData {
   currency: string;
   hourlyRate: number;
   notes?: string;
+  rounding?: RoundingConfig;
+  profile?: FreelancerProfile;
   entries: TimeEntry[];
+}
+
+function applyRounding(hours: number, config?: RoundingConfig): number {
+  if (isNaN(hours) || hours <= 0 || !config || !config.enabled || config.interval === 'none') {
+    return Math.round(hours * 100) / 100;
+  }
+
+  let stepMinutes = 15;
+  switch (config.interval) {
+    case '5m': stepMinutes = 5; break;
+    case '6m': stepMinutes = 6; break;
+    case '15m': stepMinutes = 15; break;
+    case '30m': stepMinutes = 30; break;
+    case '1h': stepMinutes = 60; break;
+  }
+
+  const totalMinutes = hours * 60;
+  let roundedMinutes: number;
+
+  if (config.direction === 'nearest') {
+    roundedMinutes = Math.round(totalMinutes / stepMinutes) * stepMinutes;
+  } else {
+    roundedMinutes = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
+  }
+
+  if (roundedMinutes <= 0 && hours > 0) {
+    roundedMinutes = stepMinutes;
+  }
+
+  return Math.round((roundedMinutes / 60) * 100) / 100;
 }
 
 const vscode = acquireVsCodeApi();
@@ -99,6 +155,37 @@ function setupEventListeners() {
     });
   });
 
+  // Profile Button
+  document.getElementById('btn-profile')?.addEventListener('click', () => {
+    openProfileModal();
+  });
+
+  // Profile Form Submit
+  document.getElementById('profile-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveProfileFromModal();
+  });
+
+  // Profile Logo file reader
+  const logoFileInput = document.getElementById('profile-logo-file') as HTMLInputElement;
+  logoFileInput?.addEventListener('change', () => {
+    const file = logoFileInput.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        currentLogoDataUrl = (ev.target?.result as string) || '';
+        updateLogoPreview(currentLogoDataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  document.getElementById('btn-remove-logo')?.addEventListener('click', () => {
+    currentLogoDataUrl = '';
+    if (logoFileInput) logoFileInput.value = '';
+    updateLogoPreview('');
+  });
+
   // Entry Form Auto-Calculation from Start/End time
   const startTimeInput = document.getElementById('entry-start') as HTMLInputElement;
   const endTimeInput = document.getElementById('entry-end') as HTMLInputElement;
@@ -116,7 +203,9 @@ function setupEventListeners() {
           diff += 24 * 60;
         }
         if (diff > 0) {
-          durationInput.value = (Math.round((diff / 60) * 100) / 100).toString();
+          const rawHours = diff / 60;
+          const rounded = applyRounding(rawHours, timesheet.rounding);
+          durationInput.value = rounded.toString();
         }
       }
     }
@@ -342,10 +431,17 @@ function renderSummary() {
   const totalAmount = billableHours * rate;
   const unbilledAmount = unbilledHours * rate;
   const invoicedAmount = invoicedHours * rate;
+  const vatRate = timesheet.profile?.vatRate ?? 0;
+  const totalWithVat = totalAmount + totalAmount * (vatRate / 100);
 
   setCard('metric-total-hours', `${totalHours.toFixed(2)} hrs`, formatHumanDuration(totalHours));
   setCard('metric-billable-hours', `${billableHours.toFixed(2)} hrs`, `${Math.round((billableHours / (totalHours || 1)) * 100)}% of total`);
-  setCard('metric-total-amount', `${totalAmount.toFixed(2)} ${cur}`, `${billableHours.toFixed(2)} billable hrs`);
+
+  if (vatRate > 0) {
+    setCard('metric-total-amount', `${totalWithVat.toFixed(2)} ${cur}`, `Excl. BTW: ${totalAmount.toFixed(2)} (${vatRate}% BTW)`);
+  } else {
+    setCard('metric-total-amount', `${totalAmount.toFixed(2)} ${cur}`, `${billableHours.toFixed(2)} billable hrs`);
+  }
   setCard('metric-unbilled-amount', `${unbilledAmount.toFixed(2)} ${cur}`, `${unbilledHours.toFixed(2)} unbilled hrs`);
 }
 
@@ -613,6 +709,14 @@ function openSettingsModal() {
   currencyInput.value = timesheet.currency || 'USD';
   notesInput.value = timesheet.notes || '';
 
+  const roundingEnabled = document.getElementById('settings-rounding-enabled') as HTMLInputElement;
+  const roundingInterval = document.getElementById('settings-rounding-interval') as HTMLSelectElement;
+  const roundingDirection = document.getElementById('settings-rounding-direction') as HTMLSelectElement;
+
+  if (roundingEnabled) roundingEnabled.checked = Boolean(timesheet.rounding?.enabled);
+  if (roundingInterval) roundingInterval.value = timesheet.rounding?.interval || '15m';
+  if (roundingDirection) roundingDirection.value = timesheet.rounding?.direction || 'up';
+
   modal.classList.add('open');
 }
 
@@ -628,6 +732,86 @@ function saveSettingsFromModal() {
   timesheet.hourlyRate = parseFloat(rateInput.value) || 0;
   timesheet.currency = currencyInput.value.trim().toUpperCase() || 'USD';
   timesheet.notes = notesInput.value.trim();
+
+  const roundingEnabled = document.getElementById('settings-rounding-enabled') as HTMLInputElement;
+  const roundingInterval = document.getElementById('settings-rounding-interval') as HTMLSelectElement;
+  const roundingDirection = document.getElementById('settings-rounding-direction') as HTMLSelectElement;
+
+  timesheet.rounding = {
+    enabled: Boolean(roundingEnabled?.checked),
+    interval: (roundingInterval?.value || '15m') as any,
+    direction: (roundingDirection?.value || 'up') as any
+  };
+
+  closeAllModals();
+  commitChanges();
+}
+
+let currentLogoDataUrl = '';
+
+function updateLogoPreview(dataUrl: string) {
+  const img = document.getElementById('profile-logo-img') as HTMLImageElement;
+  const empty = document.getElementById('profile-logo-empty');
+  const removeBtn = document.getElementById('btn-remove-logo');
+  if (img && empty && removeBtn) {
+    if (dataUrl) {
+      img.src = dataUrl;
+      img.style.display = 'block';
+      empty.style.display = 'none';
+      removeBtn.style.display = 'inline-block';
+    } else {
+      img.src = '';
+      img.style.display = 'none';
+      empty.style.display = 'block';
+      removeBtn.style.display = 'none';
+    }
+  }
+}
+
+function openProfileModal() {
+  const modal = document.getElementById('profile-modal');
+  if (!modal) return;
+
+  const p = timesheet.profile || {};
+  currentLogoDataUrl = p.logo || '';
+  updateLogoPreview(currentLogoDataUrl);
+
+  (document.getElementById('profile-bizname') as HTMLInputElement).value = p.businessName || '';
+  (document.getElementById('profile-fullname') as HTMLInputElement).value = p.fullName || '';
+  (document.getElementById('profile-email') as HTMLInputElement).value = p.email || '';
+  (document.getElementById('profile-phone') as HTMLInputElement).value = p.phone || '';
+  (document.getElementById('profile-address') as HTMLTextAreaElement).value = p.address || '';
+  (document.getElementById('profile-kvk') as HTMLInputElement).value = p.kvkNumber || '';
+  (document.getElementById('profile-vat') as HTMLInputElement).value = p.vatNumber || '';
+  (document.getElementById('profile-vatrate') as HTMLInputElement).value = (typeof p.vatRate === 'number' ? p.vatRate : 21).toString();
+  (document.getElementById('profile-iban') as HTMLInputElement).value = p.iban || '';
+  (document.getElementById('profile-bic') as HTMLInputElement).value = p.bic || '';
+  (document.getElementById('profile-paydays') as HTMLInputElement).value = (p.paymentTermsDays || 14).toString();
+
+  modal.classList.add('open');
+}
+
+function saveProfileFromModal() {
+  const bizName = (document.getElementById('profile-bizname') as HTMLInputElement).value.trim();
+  if (!bizName) {
+    alert('Vul a.u.b. een bedrijfsnaam in');
+    return;
+  }
+
+  timesheet.profile = {
+    businessName: bizName,
+    fullName: (document.getElementById('profile-fullname') as HTMLInputElement).value.trim(),
+    email: (document.getElementById('profile-email') as HTMLInputElement).value.trim(),
+    phone: (document.getElementById('profile-phone') as HTMLInputElement).value.trim(),
+    address: (document.getElementById('profile-address') as HTMLTextAreaElement).value.trim(),
+    kvkNumber: (document.getElementById('profile-kvk') as HTMLInputElement).value.trim(),
+    vatNumber: (document.getElementById('profile-vat') as HTMLInputElement).value.trim(),
+    vatRate: parseFloat((document.getElementById('profile-vatrate') as HTMLInputElement).value) || 0,
+    iban: (document.getElementById('profile-iban') as HTMLInputElement).value.trim(),
+    bic: (document.getElementById('profile-bic') as HTMLInputElement).value.trim(),
+    logo: currentLogoDataUrl,
+    paymentTermsDays: parseInt((document.getElementById('profile-paydays') as HTMLInputElement).value, 10) || 14
+  };
 
   closeAllModals();
   commitChanges();

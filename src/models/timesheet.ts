@@ -11,6 +11,30 @@ export interface TimeEntry {
   invoiceNumber?: string;
 }
 
+export type RoundingInterval = 'none' | '5m' | '6m' | '15m' | '30m' | '1h';
+export type RoundingDirection = 'up' | 'nearest';
+
+export interface RoundingConfig {
+  enabled: boolean;
+  interval: RoundingInterval;
+  direction: RoundingDirection;
+}
+
+export interface FreelancerProfile {
+  businessName?: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  kvkNumber?: string;
+  vatNumber?: string; // BTW-id
+  vatRate?: number; // e.g. 21
+  iban?: string;
+  bic?: string;
+  logo?: string; // data URI base64 or URL
+  paymentTermsDays?: number;
+}
+
 export interface TimesheetData {
   $schema?: string;
   version: string;
@@ -19,6 +43,8 @@ export interface TimesheetData {
   currency: string;
   hourlyRate: number;
   notes?: string;
+  rounding?: RoundingConfig;
+  profile?: FreelancerProfile;
   entries: TimeEntry[];
 }
 
@@ -26,7 +52,10 @@ export interface TimesheetSummary {
   totalHours: number;
   billableHours: number;
   nonBillableHours: number;
-  totalAmount: number;
+  totalAmount: number; // Subtotal excl. VAT
+  vatRate: number;
+  vatAmount: number;
+  totalWithVat: number;
   unbilledAmount: number;
   invoicedAmount: number;
   entryCount: number;
@@ -127,6 +156,38 @@ export function calculateDurationFromTimes(startTime: string, endTime: string): 
   return Math.round((diffMinutes / 60) * 100) / 100;
 }
 
+export function applyRounding(hours: number, config?: RoundingConfig): number {
+  if (isNaN(hours) || hours <= 0 || !config || !config.enabled || config.interval === 'none') {
+    return Math.round(hours * 100) / 100;
+  }
+
+  let stepMinutes = 15;
+  switch (config.interval) {
+    case '5m': stepMinutes = 5; break;
+    case '6m': stepMinutes = 6; break;
+    case '15m': stepMinutes = 15; break;
+    case '30m': stepMinutes = 30; break;
+    case '1h': stepMinutes = 60; break;
+  }
+
+  const totalMinutes = hours * 60;
+  let roundedMinutes: number;
+
+  if (config.direction === 'nearest') {
+    roundedMinutes = Math.round(totalMinutes / stepMinutes) * stepMinutes;
+  } else {
+    // Default 'up' (ceil)
+    roundedMinutes = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
+  }
+
+  // Ensure positive hours get at least one step when rounded up
+  if (roundedMinutes <= 0 && hours > 0) {
+    roundedMinutes = stepMinutes;
+  }
+
+  return Math.round((roundedMinutes / 60) * 100) / 100;
+}
+
 export function computeSummary(data: TimesheetData): TimesheetSummary {
   const rate = data.hourlyRate || 0;
   let totalHours = 0;
@@ -151,13 +212,19 @@ export function computeSummary(data: TimesheetData): TimesheetSummary {
     }
   }
 
-  const totalAmount = billableHours * rate;
+  const totalAmount = Math.round(billableHours * rate * 100) / 100;
+  const vatRate = typeof data.profile?.vatRate === 'number' ? data.profile.vatRate : 0;
+  const vatAmount = Math.round(totalAmount * (vatRate / 100) * 100) / 100;
+  const totalWithVat = Math.round((totalAmount + vatAmount) * 100) / 100;
 
   return {
     totalHours: Math.round(totalHours * 100) / 100,
     billableHours: Math.round(billableHours * 100) / 100,
     nonBillableHours: Math.round(nonBillableHours * 100) / 100,
-    totalAmount: Math.round(totalAmount * 100) / 100,
+    totalAmount,
+    vatRate,
+    vatAmount,
+    totalWithVat,
     unbilledAmount: Math.round(unbilledAmount * 100) / 100,
     invoicedAmount: Math.round(invoicedAmount * 100) / 100,
     entryCount: data.entries.length
@@ -178,6 +245,11 @@ export function createEmptyTimesheet(
     currency: currency.toUpperCase(),
     hourlyRate: hourlyRate,
     notes: 'Hourly work logged for client invoicing.',
+    rounding: {
+      enabled: false,
+      interval: '15m',
+      direction: 'up'
+    },
     entries: []
   };
 }
@@ -230,6 +302,25 @@ export function parseTimesheet(text: string): { valid: boolean; data: TimesheetD
       currency: parsed.currency || 'USD',
       hourlyRate: typeof parsed.hourlyRate === 'number' ? parsed.hourlyRate : 0,
       notes: parsed.notes || '',
+      rounding: parsed.rounding ? {
+        enabled: Boolean(parsed.rounding.enabled),
+        interval: parsed.rounding.interval || '15m',
+        direction: parsed.rounding.direction || 'up'
+      } : undefined,
+      profile: parsed.profile ? {
+        businessName: parsed.profile.businessName || '',
+        fullName: parsed.profile.fullName || '',
+        email: parsed.profile.email || '',
+        phone: parsed.profile.phone || '',
+        address: parsed.profile.address || '',
+        kvkNumber: parsed.profile.kvkNumber || '',
+        vatNumber: parsed.profile.vatNumber || '',
+        vatRate: typeof parsed.profile.vatRate === 'number' ? parsed.profile.vatRate : 0,
+        iban: parsed.profile.iban || '',
+        bic: parsed.profile.bic || '',
+        logo: parsed.profile.logo || '',
+        paymentTermsDays: typeof parsed.profile.paymentTermsDays === 'number' ? parsed.profile.paymentTermsDays : 14
+      } : undefined,
       entries: parsed.entries
     };
 

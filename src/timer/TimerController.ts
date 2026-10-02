@@ -7,7 +7,8 @@ import {
   parseTimesheet,
   createEmptyTimesheet,
   TimeEntry,
-  formatDuration
+  formatDuration,
+  applyRounding
 } from '../models/timesheet';
 
 export class TimerController {
@@ -103,17 +104,29 @@ export class TimerController {
     const startTimeStr = `${sH}:${sM}`;
     const endTimeStr = `${eH}:${eM}`;
 
+    const fileUri = await this.getTargetTimesheetUri();
+    let roundingConfig;
+    if (fileUri) {
+      try {
+        const fileBytes = await vscode.workspace.fs.readFile(fileUri);
+        const { data } = parseTimesheet(Buffer.from(fileBytes).toString('utf8'));
+        roundingConfig = data.rounding;
+      } catch {}
+    }
+
+    const roundedDuration = applyRounding(durationHours, roundingConfig);
+
     // Prompt user to verify/edit hours or description
     const confirmedHoursStr = await vscode.window.showInputBox({
-      prompt: `Confirm duration in hours (elapsed: ${formatDuration(durationHours)})`,
-      value: durationHours.toString()
+      prompt: `Confirm duration in hours (elapsed: ${formatDuration(durationHours)}${roundedDuration !== durationHours ? `, rounded: ${formatDuration(roundedDuration)}` : ''})`,
+      value: roundedDuration.toString()
     });
 
     if (!confirmedHoursStr) {
       return; // Cancelled
     }
 
-    const finalHours = parseFloat(confirmedHoursStr) || durationHours;
+    const finalHours = parseFloat(confirmedHoursStr) || roundedDuration;
 
     const entry: TimeEntry = {
       id: generateEntryId(),

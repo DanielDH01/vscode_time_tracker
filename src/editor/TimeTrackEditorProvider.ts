@@ -37,6 +37,14 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
     const updateWebview = () => {
       const text = document.getText();
       const { data } = parseTimesheet(text);
+
+      if (!data.profile) {
+        const savedProfile = this.context.globalState.get<any>('timetracker.freelancerProfile');
+        if (savedProfile) {
+          data.profile = savedProfile;
+        }
+      }
+
       webviewPanel.webview.postMessage({
         type: 'update',
         data
@@ -65,6 +73,9 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
 
         case 'save': {
           const newData: TimesheetData = message.data;
+          if (newData.profile) {
+            await this.context.globalState.update('timetracker.freelancerProfile', newData.profile);
+          }
           const formatted = JSON.stringify(newData, null, 2);
           isInternalUpdate = true;
           await this.updateTextDocument(document, formatted);
@@ -171,6 +182,7 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
       </div>
     </div>
     <div class="header-actions">
+      <button id="btn-profile" class="btn btn-secondary">🏢 Factuurprofiel</button>
       <button id="btn-settings" class="btn btn-secondary">⚙️ Settings</button>
       <button id="btn-export" class="btn btn-secondary">📄 Export Invoice</button>
       <button id="btn-add-entry" class="btn">➕ Add Entry</button>
@@ -334,9 +346,130 @@ export class TimeTrackEditorProvider implements vscode.CustomTextEditorProvider 
           <label for="settings-notes">Invoice Notes / Terms</label>
           <textarea id="settings-notes" rows="3" placeholder="Payment terms, bank details, or project scope notes..."></textarea>
         </div>
+
+        <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-color);">
+          <label style="font-weight: 600; margin-bottom: 8px;">⏱️ Slimme Afronding (Billing Rules)</label>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="settings-rounding-enabled">
+              Automatische uren-afronding toepassen
+            </label>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="settings-rounding-interval">Afronden op</label>
+              <select id="settings-rounding-interval">
+                <option value="15m">15 minuten (0.25u) - Aanbevolen</option>
+                <option value="30m">30 minuten (0.5u)</option>
+                <option value="6m">6 minuten (0.1u)</option>
+                <option value="5m">5 minuten (0.08u)</option>
+                <option value="1h">1 heel uur (1.0u)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="settings-rounding-direction">Methode</label>
+              <select id="settings-rounding-direction">
+                <option value="up">Altijd naar boven afronden (Ceil)</option>
+                <option value="nearest">Naar dichtstbijzijnde afronden</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary modal-close">Cancel</button>
           <button type="submit" class="btn">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Freelancer Profile Modal -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal" style="max-width: 580px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2>🏢 Freelancer Factuurprofiel</h2>
+        <button class="close-btn modal-close">&times;</button>
+      </div>
+      <p style="color: var(--text-muted); margin-bottom: 16px;">
+        Stel je bedrijfslogo en factuurgegevens in. Deze worden automatisch op je geëxporteerde facturen geplaatst.
+      </p>
+      <form id="profile-form" novalidate>
+        <!-- Logo Section -->
+        <div class="form-group" style="background: var(--vscode-editor-background); padding: 12px; border-radius: 6px; border: 1px dashed var(--border-color); margin-bottom: 16px;">
+          <label style="font-weight: 600;">Bedrijfslogo</label>
+          <div style="display: flex; gap: 16px; align-items: center; margin-top: 8px;">
+            <div id="profile-logo-container" style="width: 80px; height: 50px; background: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border-color);">
+              <img id="profile-logo-img" src="" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain; display: none;">
+              <span id="profile-logo-empty" style="color: #999; font-size: 11px;">Geen logo</span>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+              <input type="file" id="profile-logo-file" accept="image/*" style="font-size: 11px;">
+              <button type="button" id="btn-remove-logo" class="btn btn-secondary btn-icon" style="align-self: flex-start; display: none;">Logo verwijderen</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-bizname">Bedrijfsnaam *</label>
+            <input type="text" id="profile-bizname" placeholder="bijv. Daniel Software Development" required>
+          </div>
+          <div class="form-group">
+            <label for="profile-fullname">Jouw Naam</label>
+            <input type="text" id="profile-fullname" placeholder="bijv. Daniel D.">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-email">E-mailadres</label>
+            <input type="text" id="profile-email" placeholder="facturatie@bedrijf.nl">
+          </div>
+          <div class="form-group">
+            <label for="profile-phone">Telefoonnummer</label>
+            <input type="text" id="profile-phone" placeholder="+31 6 12345678">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="profile-address">Adres & Vestiging</label>
+          <textarea id="profile-address" rows="2" placeholder="Straatnaam 123&#10;1234 AB Amsterdam, Nederland"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-kvk">KvK-nummer</label>
+            <input type="text" id="profile-kvk" placeholder="12345678">
+          </div>
+          <div class="form-group">
+            <label for="profile-vat">BTW-identificatienummer</label>
+            <input type="text" id="profile-vat" placeholder="NL123456789B01">
+          </div>
+          <div class="form-group" style="max-width: 110px;">
+            <label for="profile-vatrate">BTW %</label>
+            <input type="number" id="profile-vatrate" step="1" min="0" value="21">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-iban">IBAN Rekeningnummer</label>
+            <input type="text" id="profile-iban" placeholder="NL99 BANK 0123 4567 89">
+          </div>
+          <div class="form-group" style="max-width: 140px;">
+            <label for="profile-bic">BIC / Swift (Optioneel)</label>
+            <input type="text" id="profile-bic" placeholder="BANKNL2A">
+          </div>
+          <div class="form-group" style="max-width: 120px;">
+            <label for="profile-paydays">Betaaltermijn (Dagen)</label>
+            <input type="number" id="profile-paydays" min="1" value="14">
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary modal-close">Annuleren</button>
+          <button type="submit" class="btn">Profiel Opslaan</button>
         </div>
       </form>
     </div>

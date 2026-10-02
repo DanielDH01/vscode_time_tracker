@@ -6,13 +6,31 @@
   "currency": "EUR",
   "hourlyRate": 85,
   "notes": "Payment terms: Net 30 days. Work includes frontend UI, backend API integration, and performance audits.",
+  "rounding": {
+    "enabled": true,
+    "interval": "15m",
+    "direction": "up"
+  },
+  "profile": {
+    "businessName": "Daniel Software Development",
+    "fullName": "Daniel D.",
+    "email": "contact@danieldev.nl",
+    "phone": "+31 6 12345678",
+    "address": "Herengracht 100\n1015 BS Amsterdam, Nederland",
+    "kvkNumber": "88776655",
+    "vatNumber": "NL887766555B01",
+    "vatRate": 21,
+    "iban": "NL91ABNA0417164300",
+    "bic": "ABNANL2A",
+    "paymentTermsDays": 14
+  },
   "entries": [
     {
       "id": "tt_init_01",
       "date": "2026-09-22",
       "startTime": "09:00",
       "endTime": "12:00",
-      "durationHours": 3.0,
+      "durationHours": 3,
       "category": "Development",
       "description": "Implemented OAuth2 user authentication and session management",
       "billable": true,
@@ -58,7 +76,7 @@
       "date": "2026-09-24",
       "startTime": "11:00",
       "endTime": "12:00",
-      "durationHours": 1.0,
+      "durationHours": 1,
       "category": "Internal",
       "description": "Internal developer tooling setup and dependency audit",
       "billable": false,
@@ -72,6 +90,17 @@
       "durationHours": 2.5,
       "category": "Development",
       "description": "Integrated export module for HTML, Markdown, and CSV client invoices",
+      "billable": true,
+      "invoiced": false
+    },
+    {
+      "id": "tt_muh1numc_46cs",
+      "date": "2026-09-25",
+      "startTime": "10:00",
+      "endTime": "18:00",
+      "durationHours": 8,
+      "category": "Development",
+      "description": "test",
       "billable": true,
       "invoiced": false
     }
